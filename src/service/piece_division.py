@@ -21,14 +21,14 @@ class PieceDivision:
         self.multi_input_dir.mkdir(parents=True, exist_ok=True)
         self.single_input_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     def process_init(self):
         self.idx = 0
-    
+
     def extract_multi_pieces(self, piece_id):
         image_path = self.multi_input_dir / f"{piece_id}.png"
         self.extract_pieces_masked(image_path)
-    
+
     def extract_single_piece(self, piece_id, img_id):
         image_path = self.single_input_dir / f"{piece_id}_{img_id}.png"
         self.extract_pieces_masked(image_path)
