@@ -36,7 +36,7 @@ def jigsaw(imgA, imgB):
     result[warpedMask > 0] = warpedB[warpedMask > 0]
 
     # --- 保存 & スコア出力 ---
-    cv2.imwrite('data/result/result.jpg', result)
+    cv2.imwrite('data/result/result_2.jpg', result)
     score = np.mean([m.distance for m in matches[:N_MATCHES]])
     print(f"Similarity transform score (lower is better): {score:.2f}")
 
@@ -44,5 +44,5 @@ def jigsaw(imgA, imgB):
 if __name__ == "__main__":
     # --- 画像の読み込み ---
     imgA = cv2.imread('data/complete.jpg')  # 完成図
-    imgB = cv2.imread('data/piece_transparent/B1.png', cv2.IMREAD_UNCHANGED)  # ピース（透過あり）
+    imgB = cv2.imread('data/piece_transparent/piece_014.png', cv2.IMREAD_UNCHANGED)  # ピース（透過あり）
     jigsaw(imgA, imgB)

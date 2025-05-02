@@ -1,9 +1,11 @@
+import os
+
 import cv2
 import numpy as np
-import os
 from PIL import Image
 
-def extract_pieces_masked(image_path, output_dir="drive/MyDrive/数理実験", work_short_edge=800):
+
+def extract_pieces_masked(image_path, output_dir="data/piece_transparent", work_short_edge=800):
     # 1. 画像読み込み & リサイズ（作業用画像）
     img_full = cv2.imread(image_path)
     h_full, w_full = img_full.shape[:2]
@@ -68,4 +70,4 @@ def extract_pieces_masked(image_path, output_dir="drive/MyDrive/数理実験", w
 
 
 if __name__ == "__main__":
-    extract_pieces_masked("drive/MyDrive/数理実験/IMG_2674.jpg")
+    extract_pieces_masked("data/puzzle_pieces/IMG_2674.JPG")
