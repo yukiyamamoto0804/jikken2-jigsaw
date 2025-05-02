@@ -5,7 +5,9 @@ import numpy as np
 from PIL import Image
 
 
-def extract_pieces_masked(image_path, output_dir="data/piece_transparent", work_short_edge=800):
+def extract_pieces_masked(
+    image_path, output_dir="data/piece_transparent", work_short_edge=800
+):
     # 1. 画像読み込み & リサイズ（作業用画像）
     img_full = cv2.imread(image_path)
     h_full, w_full = img_full.shape[:2]
@@ -37,7 +39,7 @@ def extract_pieces_masked(image_path, output_dir="data/piece_transparent", work_
         x, y, w_box, h_box = cv2.boundingRect(cnt_orig)
 
         # 6. ROI（元画像から切り出し）
-        roi = img_full[y:y+h_box, x:x+w_box]
+        roi = img_full[y : y + h_box, x : x + w_box]
 
         # 7. マスク作成（正確な輪郭をROIローカル座標に変換）
         cnt_local = cnt_orig.copy()
@@ -54,8 +56,8 @@ def extract_pieces_masked(image_path, output_dir="data/piece_transparent", work_
         x_min, x_max = xs.min(), xs.max()
         y_min, y_max = ys.min(), ys.max()
 
-        roi_cropped = roi[y_min:y_max+1, x_min:x_max+1]
-        mask_cropped = mask[y_min:y_max+1, x_min:x_max+1]
+        roi_cropped = roi[y_min : y_max + 1, x_min : x_max + 1]
+        mask_cropped = mask[y_min : y_max + 1, x_min : x_max + 1]
 
         # 9. RGBA画像として保存（アルファチャンネル追加）
         roi_rgb = cv2.cvtColor(roi_cropped, cv2.COLOR_BGR2RGB)

@@ -14,6 +14,7 @@ def main() -> None:
     pg = st.navigation([page1])
     pg.run()
 
+
 def folder_setup():
     # フォルダが存在しなければ作成
     os.makedirs("data/", exist_ok=True)

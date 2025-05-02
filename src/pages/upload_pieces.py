@@ -7,7 +7,9 @@ st.title("ジグソーパズルのピースをアップロード")
 
 SAVE_DIR = "data/puzzle_pieces"
 
-uploaded_image = st.file_uploader("ピースの画像をアップロード", type=["jpg", "png", "jpeg"])
+uploaded_image = st.file_uploader(
+    "ピースの画像をアップロード", type=["jpg", "png", "jpeg"]
+)
 
 if uploaded_image:
     image = Image.open(uploaded_image)
