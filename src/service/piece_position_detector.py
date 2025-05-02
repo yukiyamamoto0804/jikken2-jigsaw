@@ -16,6 +16,7 @@ class PiecePositionDetector:
         self.complete_dir = Path(complete_dir)
         self.output_dir = Path(output_dir)
         self.piece_dir.mkdir(parents=True, exist_ok=True)
+        self.complete_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.debug = debug
 
