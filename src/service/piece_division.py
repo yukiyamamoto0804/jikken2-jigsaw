@@ -27,13 +27,13 @@ class PieceDivision:
 
     def extract_multi_pieces(self, piece_id):
         image_path = self.multi_input_dir / f"{piece_id}.png"
-        self.extract_pieces_masked(image_path)
+        self.extract_pieces_masked(image_path, piece_id)
 
     def extract_single_piece(self, piece_id, img_id):
         image_path = self.single_input_dir / f"{piece_id}_{img_id}.png"
-        self.extract_pieces_masked(image_path)
+        self.extract_pieces_masked(image_path, piece_id)
 
-    def extract_pieces_masked(self, image_path, work_short_edge=800):
+    def extract_pieces_masked(self, image_path, piece_id, work_short_edge=800):
         # 1. 画像読み込み & リサイズ（作業用画像）
         img_full = cv2.imread(image_path)
         h_full, w_full = img_full.shape[:2]
@@ -93,7 +93,7 @@ class PieceDivision:
 
             self.idx += 1
             idx += 1
-            out_path = self.output_dir / f"piece_{self.idx:03d}.png"
+            out_path = self.output_dir / f"{piece_id}_{self.idx:03d}.png"
             Image.fromarray(rgba).save(out_path)
 
         print(f"{idx} 個の透明背景付きピースを切り出して保存しました。")
