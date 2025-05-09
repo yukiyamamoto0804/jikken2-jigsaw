@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import streamlit as st
@@ -15,6 +16,8 @@ if uploaded_image:
 
     # 保存先のパス
     save_dir = Path("data/puzzle_pieces")
+    if save_dir.exists():
+        shutil.rmtree(save_dir)  # ディレクトリごと削除
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / f"{st.session_state.puzzle_id}.png"
 

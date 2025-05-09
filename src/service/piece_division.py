@@ -1,4 +1,4 @@
-import os
+import shutil
 from pathlib import Path
 
 import cv2
@@ -18,6 +18,12 @@ class PieceDivision:
         self.single_input_dir = Path(single_input_dir)
         self.output_dir = Path(output_dir)
         self.debug = debug
+        if self.multi_input_dir.exists():
+            shutil.rmtree(self.multi_input_dir)
+        if self.single_input_dir.exists():
+            shutil.rmtree(self.single_input_dir)
+        if self.output_dir.exists():
+            shutil.rmtree(self.output_dir)
         self.multi_input_dir.mkdir(parents=True, exist_ok=True)
         self.single_input_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -33,7 +39,7 @@ class PieceDivision:
         image_path = self.single_input_dir / f"{piece_id}_{img_id}.png"
         self.extract_pieces_masked(image_path, piece_id)
 
-    def extract_pieces_masked(self, image_path, piece_id, work_short_edge=800):
+    def extract_pieces_masked(self, image_path, piece_id, work_short_edge=3200):
         # 1. 画像読み込み & リサイズ（作業用画像）
         img_full = cv2.imread(image_path)
         h_full, w_full = img_full.shape[:2]

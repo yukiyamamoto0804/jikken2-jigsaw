@@ -1,3 +1,4 @@
+import shutil
 import uuid
 from pathlib import Path
 
@@ -26,6 +27,8 @@ if uploaded_image and st.session_state.puzzle_saved is False:
 
     # 保存先のパス
     save_dir = Path("data/complete_picture")
+    if save_dir.exists():
+        shutil.rmtree(save_dir)  # ディレクトリごと削除
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / f"{puzzle_id}.png"
 

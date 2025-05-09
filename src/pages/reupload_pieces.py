@@ -21,6 +21,7 @@ image_dir = Path("data/piece_transparent")
 #         # Streamlitで表示
 #         st.image(image, caption="これは画像です", use_column_width=True)
 
+
 def display_piece():
     # 画像の表示
     idx = 0
@@ -68,6 +69,7 @@ def display_piece():
                     position_index += 1
             else:
                 break
+
 
 display_piece()
 # ポップアップとして画像を拡大表示

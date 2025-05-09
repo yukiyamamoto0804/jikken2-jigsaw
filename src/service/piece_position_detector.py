@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import cv2
@@ -15,6 +16,12 @@ class PiecePositionDetector:
         self.piece_dir = Path(piece_dir)
         self.complete_dir = Path(complete_dir)
         self.output_dir = Path(output_dir)
+        if self.piece_dir.exists():
+            shutil.rmtree(self.piece_dir)
+        if self.complete_dir.exists():
+            shutil.rmtree(self.complete_dir)
+        if self.output_dir.exists():
+            shutil.rmtree(self.output_dir)
         self.piece_dir.mkdir(parents=True, exist_ok=True)
         self.complete_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
