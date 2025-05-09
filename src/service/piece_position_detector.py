@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 import cv2
 import numpy as np
@@ -7,14 +8,22 @@ class PiecePositionDetector:
         self.piece_dir = Path(piece_dir)
         self.complete_dir = Path(complete_dir)
         self.output_dir = Path(output_dir)
+        if self.piece_dir.exists():
+            shutil.rmtree(self.piece_dir)
+        if self.complete_dir.exists():
+            shutil.rmtree(self.complete_dir)
+        if self.output_dir.exists():
+            shutil.rmtree(self.output_dir)
         self.piece_dir.mkdir(parents=True, exist_ok=True)
         self.complete_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.debug = debug
 
-    def main_process(self, piece_id, max_index):
-        complete_img_path = self.complete_dir / f"{piece_id}.jpg"
-        if not complete_img_path.is_file():
+    def main_process_all(self, piece_id, max_index):
+        complete_img_path = self.complete_dir / f"{piece_id}.png"
+        if complete_img_path.is_file():
+            complete_img = cv2.imread(complete_img_path)
+        else:
             raise FileNotFoundError(f"Input file not found: {complete_img_path}")
 
         complete_img = cv2.imread(str(complete_img_path))
@@ -27,25 +36,36 @@ class PiecePositionDetector:
         for i in range(max_index):
             page_string = str(i + 1).zfill(3)
             piece_img_path = self.piece_dir / f"{piece_id}_{page_string}.png"
-            if not piece_img_path.is_file():
-                continue
+            if piece_img_path.is_file():
+                piece_img = cv2.imread(piece_img_path, cv2.IMREAD_UNCHANGED)
+                if self.debug:
+                    cv2.imshow(
+                        "Piece Image", piece_img
+                    )  # ← 第1引数にウィンドウタイトル
+                    cv2.waitKey(0)  # ← キー入力を待つ（表示されるのに必要）
+                    cv2.destroyAllWindows()  # ← ウィンドウを閉じる処理
+                self.jigsaw(complete_img, piece_img, piece_id, page_string)
 
-            piece_img = cv2.imread(str(piece_img_path), cv2.IMREAD_UNCHANGED)
-            if piece_img is None:
-                continue
+    def main_process_single(self, piece_id, page_string):
+        complete_img_path = self.complete_dir / f"{piece_id}.png"
+        if complete_img_path.is_file():
+            complete_img = cv2.imread(complete_img_path)
+        else:
+            raise FileNotFoundError(f"Input file not found: {complete_img_path}")
+        piece_img_path = self.piece_dir / f"{piece_id}_{page_string}.png"
+        if piece_img_path.is_file():
+            piece_img = cv2.imread(piece_img_path, cv2.IMREAD_UNCHANGED)
+            if self.debug:
+                cv2.imshow("Piece Image", piece_img)  # ← 第1引数にウィンドウタイトル
+                cv2.waitKey(0)  # ← キー入力を待つ（表示されるのに必要）
+                cv2.destroyAllWindows()  # ← ウィンドウを閉じる処理
+            output_path = self.jigsaw(complete_img, piece_img, piece_id, page_string)
+        else:
+            raise FileNotFoundError(f"Input file not found: {piece_img_path}")
+        return output_path
 
-            self.jigsaw_multiscale(complete_img, piece_img, piece_id, page_string)
-
-    def apply_bilateral_filter(self, img_bgr):
-        return cv2.bilateralFilter(img_bgr, d=9, sigmaColor=75, sigmaSpace=75)
-
-    def apply_clahe_to_v_channel(self, img_bgr):
-        hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        hsv[:, :, 2] = clahe.apply(hsv[:, :, 2])
-        return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-
-    def jigsaw_multiscale(self, imgA, imgB, piece_id, page_string):
+    def jigsaw(self, imgA, imgB, piece_id, page_string):
+        # --- アルファチャンネル処理 ---
         bgrB = imgB[:, :, :3]
         alphaB = imgB[:, :, 3]
         maskB = (alphaB > 0).astype(np.uint8)
@@ -141,12 +161,31 @@ class PiecePositionDetector:
         result = imgA.copy()
         result[warpedMask > 0] = warpedB[warpedMask > 0]
 
+
         contours, _ = cv2.findContours(warpedMask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cv2.drawContours(result, contours, -1, (0, 0, 255), 2)
+ 
+        # --- 保存 & スコア出力 ---
+        output_path = self.output_dir / f"{piece_id}_{page_string}.png"
+        cv2.imwrite(output_path, result)
+        score = np.mean([m.distance for m in matches[:N_MATCHES]])
+        print(f"Similarity transform score (lower is better): {score:.2f}")
+        return output_path
+
 
         score = np.mean([m.distance for m in top_matches])
         return result, score
 
+    def apply_bilateral_filter(self, img_bgr):
+        return cv2.bilateralFilter(img_bgr, d=9, sigmaColor=75, sigmaSpace=75)
+
+    def apply_clahe_to_v_channel(self, img_bgr):
+        hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        hsv[:, :, 2] = clahe.apply(hsv[:, :, 2])
+        return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
 if __name__ == "__main__":
-    detector = PiecePositionDetector(debug=True)
-    detector.main_process(piece_id="piece", max_index=40)
+    piece_position_detector = PiecePositionDetector(debug=True)
+    piece_position_detector.main_process_all(piece_id="piece", max_index=16)
+    piece_position_detector.main_process_single(piece_id="piece", page_string="001")

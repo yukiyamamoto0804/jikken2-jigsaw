@@ -1,4 +1,4 @@
-import os
+import shutil
 from pathlib import Path
 
 import cv2
@@ -18,6 +18,12 @@ class PieceDivision:
         self.single_input_dir = Path(single_input_dir)
         self.output_dir = Path(output_dir)
         self.debug = debug
+        if self.multi_input_dir.exists():
+            shutil.rmtree(self.multi_input_dir)
+        if self.single_input_dir.exists():
+            shutil.rmtree(self.single_input_dir)
+        if self.output_dir.exists():
+            shutil.rmtree(self.output_dir)
         self.multi_input_dir.mkdir(parents=True, exist_ok=True)
         self.single_input_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
