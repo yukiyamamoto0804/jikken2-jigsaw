@@ -27,15 +27,19 @@ class PieceDivision:
 
     def extract_multi_pieces(self, piece_id):
         image_path = self.multi_input_dir / f"{piece_id}.png"
-        self.extract_pieces_masked(image_path)
+        self.extract_pieces_masked(image_path, piece_id)
 
     def extract_single_piece(self, piece_id, img_id):
         image_path = self.single_input_dir / f"{piece_id}_{img_id}.png"
-        self.extract_pieces_masked(image_path)
+        self.extract_pieces_masked(image_path, piece_id)
 
-    def extract_pieces_masked(self, image_path, work_short_edge=800):
+    def extract_pieces_masked(self, image_path, piece_id, work_short_edge=3200):
         # 1. 画像読み込み & リサイズ（作業用画像）
-        img_full = cv2.imread(image_path)
+        img_full = cv2.imread(str(image_path))
+        if img_full is None:
+            print(f"画像が読み込めませんでした: {image_path}")
+            return
+
         h_full, w_full = img_full.shape[:2]
         scale = work_short_edge / min(h_full, w_full)
         w_work, h_work = int(w_full * scale), int(h_full * scale)
@@ -93,7 +97,7 @@ class PieceDivision:
 
             self.idx += 1
             idx += 1
-            out_path = self.output_dir / f"piece_{self.idx:03d}.png"
+            out_path = self.output_dir / f"{piece_id}_{self.idx:03d}.png"
             Image.fromarray(rgba).save(out_path)
 
         print(f"{idx} 個の透明背景付きピースを切り出して保存しました。")
@@ -102,5 +106,7 @@ class PieceDivision:
 if __name__ == "__main__":
     piece_division = PieceDivision(debug=False)
     piece_division.process_init()
-    piece_division.extract_multi_pieces("piece")
-    piece_division.extract_single_piece("piece", "1")
+    
+    # 実在する画像ファイル名に合わせてここを変更してください
+    piece_division.extract_multi_pieces("piece")  # 例: data/puzzle_pieces/0.png
+    #piece_division.extract_single_piece("0", "1")  # 例: data/single_piece/0_1.png
