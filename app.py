@@ -39,6 +39,8 @@ def init_state():
         st.session_state.puzzle_saved = False
     if "puzzle_id" not in st.session_state:
         st.session_state.puzzle_id = None
+    if "selected_image" not in st.session_state:  # ポップアップ用
+        st.session_state.selected_image = None
     if "piece_division" not in st.session_state:
         st.session_state.piece_division = PieceDivision()
     if "piece_position_detector" not in st.session_state:

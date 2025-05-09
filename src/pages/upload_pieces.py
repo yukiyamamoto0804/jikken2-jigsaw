@@ -22,7 +22,7 @@ if uploaded_image:
     image.save(save_path)
 
     st.success(f"画像を '{save_path}' に保存しました。")
-    st.image(image, caption="アップロードしたピースの画像", use_column_width=True)
+    st.image(image, caption="アップロードしたピースの画像", use_container_width=True)
 
     if st.button("ピース確認ページへ"):
         st.session_state.piece_division.extract_multi_pieces(st.session_state.puzzle_id)

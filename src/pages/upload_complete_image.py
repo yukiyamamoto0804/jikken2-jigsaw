@@ -13,7 +13,7 @@ uploaded_image = st.file_uploader(
 
 if uploaded_image:
     image = Image.open(uploaded_image)
-    st.image(image, caption="パズル全体の画像をアップロード", use_column_width=True)
+    st.image(image, caption="パズル全体の画像をアップロード", use_container_width=True)
 
     if st.button("Go to Upload Pieces Page"):
         st.session_state.page = "upload_pieces"

@@ -20,8 +20,8 @@ class PiecePositionDetector:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.debug = debug
 
-    def main_process(self, piece_id, max_index):
-        complete_img_path = self.complete_dir / f"{piece_id}.jpg"
+    def main_process_all(self, piece_id, max_index):
+        complete_img_path = self.complete_dir / f"{piece_id}.png"
         if complete_img_path.is_file():
             complete_img = cv2.imread(complete_img_path)
         else:
@@ -38,6 +38,24 @@ class PiecePositionDetector:
                     cv2.waitKey(0)  # ← キー入力を待つ（表示されるのに必要）
                     cv2.destroyAllWindows()  # ← ウィンドウを閉じる処理
                 self.jigsaw(complete_img, piece_img, piece_id, page_string)
+
+    def main_process_single(self, piece_id, page_string):
+        complete_img_path = self.complete_dir / f"{piece_id}.png"
+        if complete_img_path.is_file():
+            complete_img = cv2.imread(complete_img_path)
+        else:
+            raise FileNotFoundError(f"Input file not found: {complete_img_path}")
+        piece_img_path = self.piece_dir / f"{piece_id}_{page_string}.png"
+        if piece_img_path.is_file():
+            piece_img = cv2.imread(piece_img_path, cv2.IMREAD_UNCHANGED)
+            if self.debug:
+                cv2.imshow("Piece Image", piece_img)  # ← 第1引数にウィンドウタイトル
+                cv2.waitKey(0)  # ← キー入力を待つ（表示されるのに必要）
+                cv2.destroyAllWindows()  # ← ウィンドウを閉じる処理
+            output_path = self.jigsaw(complete_img, piece_img, piece_id, page_string)
+        else:
+            raise FileNotFoundError(f"Input file not found: {piece_img_path}")
+        return output_path
 
     def jigsaw(self, imgA, imgB, piece_id, page_string):
         # --- アルファチャンネル処理 ---
@@ -81,8 +99,10 @@ class PiecePositionDetector:
         cv2.imwrite(output_path, result)
         score = np.mean([m.distance for m in matches[:N_MATCHES]])
         print(f"Similarity transform score (lower is better): {score:.2f}")
+        return output_path
 
 
 if __name__ == "__main__":
     piece_position_detector = PiecePositionDetector(debug=True)
-    piece_position_detector.main_process(piece_id="piece", max_index=16)
+    piece_position_detector.main_process_all(piece_id="piece", max_index=16)
+    piece_position_detector.main_process_single(piece_id="piece", page_string="001")
