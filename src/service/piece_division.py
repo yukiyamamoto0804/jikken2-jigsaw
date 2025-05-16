@@ -112,7 +112,7 @@ class PieceDivision:
 if __name__ == "__main__":
     piece_division = PieceDivision(debug=False)
     piece_division.process_init()
-    
+
     # 実在する画像ファイル名に合わせてここを変更してください
     piece_division.extract_multi_pieces("piece")  # 例: data/puzzle_pieces/0.png
-    #piece_division.extract_single_piece("0", "1")  # 例: data/single_piece/0_1.png
+    # piece_division.extract_single_piece("0", "1")  # 例: data/single_piece/0_1.png
