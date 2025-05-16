@@ -49,9 +49,7 @@ class PiecePositionDetector:
             if piece_img_path.is_file():
                 piece_img = cv2.imread(piece_img_path, cv2.IMREAD_UNCHANGED)
                 if self.debug:
-                    cv2.imshow(
-                        "Piece Image", piece_img
-                    )  # ← 第1引数にウィンドウタイトル
+                    cv2.imshow("Piece Image", piece_img)  # ← 第1引数にウィンドウタイトル
                     cv2.waitKey(0)  # ← キー入力を待つ（表示されるのに必要）
                     cv2.destroyAllWindows()  # ← ウィンドウを閉じる処理
                 self.jigsaw(complete_img, piece_img, piece_id, page_string)
@@ -86,14 +84,10 @@ class PiecePositionDetector:
         # 不透明な部分（α > 0）をマスクにする
         maskB = (a > 0).astype(np.uint8) * 255
         # 内側に20px縮小（モルフォロジー演算）
-        kernel = cv2.getStructuringElement(
-            cv2.MORPH_ELLIPSE, (41, 41)
-        )  # 直径=2r+1でr=40
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (41, 41))  # 直径=2r+1でr=40
         inner_mask = cv2.erode(maskB, kernel)
         # 輪郭検出（外周輪郭のみ）
-        inner_contours, _ = cv2.findContours(
-            inner_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-        )
+        inner_contours, _ = cv2.findContours(inner_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         return inner_contours
 
     # 特徴点のフィルタリング：輪郭の中にあるものだけを残す
@@ -102,10 +96,7 @@ class PiecePositionDetector:
         for kp in keypoints:
             pt = kp.pt
             # pointPolygonTest: 点が輪郭内なら >= 0
-            if any(
-                cv2.pointPolygonTest(cnt, pt, measureDist=False) >= 0
-                for cnt in contours
-            ):
+            if any(cv2.pointPolygonTest(cnt, pt, measureDist=False) >= 0 for cnt in contours):
                 filtered.append(kp)
         return filtered
 
@@ -134,12 +125,8 @@ class PiecePositionDetector:
             best_result = result
 
         for scale in scales:
-            scaled_bgrB = cv2.resize(
-                bgrB, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR
-            )
-            scaled_maskB = cv2.resize(
-                maskB, None, fx=scale, fy=scale, interpolation=cv2.INTER_NEAREST
-            )
+            scaled_bgrB = cv2.resize(bgrB, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+            scaled_maskB = cv2.resize(maskB, None, fx=scale, fy=scale, interpolation=cv2.INTER_NEAREST)
 
             result, score = self.try_match(imgA, scaled_bgrB, scaled_maskB, contours)
             if result is not None and score < best_score:
@@ -154,6 +141,7 @@ class PiecePositionDetector:
                 cv2.imshow("Result", best_result)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
+            return output_path
         else:
             print(f"❌ マッチ失敗: {piece_id}_{page_string}")
 
@@ -263,15 +251,9 @@ class PiecePositionDetector:
         result[warpedMask > 0] = warpedB[warpedMask > 0]
 
         for m in good_matches[:N_MATCHES]:
-            ptA = tuple(
-                np.round(kpA[m.trainIdx].pt).astype(int)
-            )  # 合成先（imgA上の点）
+            ptA = tuple(np.round(kpA[m.trainIdx].pt).astype(int))  # 合成先（imgA上の点）
             ptB = tuple(
-                np.round(
-                    cv2.transform(
-                        np.array([[kpB[m.queryIdx].pt]], dtype=np.float32), M
-                    )[0][0]
-                ).astype(int)
+                np.round(cv2.transform(np.array([[kpB[m.queryIdx].pt]], dtype=np.float32), M)[0][0]).astype(int)
             )  # warp後の位置
 
             # 線を引く（青）、点を描く（赤）
@@ -279,9 +261,7 @@ class PiecePositionDetector:
             cv2.circle(result, ptA, 3, (0, 0, 255), -1)
             cv2.circle(result, ptB, 3, (0, 255, 0), -1)
 
-        contours, _ = cv2.findContours(
-            warpedMask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-        )
+        contours, _ = cv2.findContours(warpedMask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cv2.drawContours(result, contours, -1, (0, 0, 255), 2)
 
         score = np.mean([m.distance for m in top_matches])
