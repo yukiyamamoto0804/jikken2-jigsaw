@@ -41,7 +41,11 @@ class PieceDivision:
 
     def extract_pieces_masked(self, image_path, piece_id, work_short_edge=3200):
         # 1. 画像読み込み & リサイズ（作業用画像）
-        img_full = cv2.imread(image_path)
+        img_full = cv2.imread(str(image_path))
+        if img_full is None:
+            print(f"画像が読み込めませんでした: {image_path}")
+            return
+
         h_full, w_full = img_full.shape[:2]
         scale = work_short_edge / min(h_full, w_full)
         w_work, h_work = int(w_full * scale), int(h_full * scale)
@@ -108,5 +112,7 @@ class PieceDivision:
 if __name__ == "__main__":
     piece_division = PieceDivision(debug=False)
     piece_division.process_init()
-    piece_division.extract_multi_pieces("piece")
-    piece_division.extract_single_piece("piece", "1")
+    
+    # 実在する画像ファイル名に合わせてここを変更してください
+    piece_division.extract_multi_pieces("piece")  # 例: data/puzzle_pieces/0.png
+    #piece_division.extract_single_piece("0", "1")  # 例: data/single_piece/0_1.png

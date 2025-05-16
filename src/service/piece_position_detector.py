@@ -1,9 +1,7 @@
 import shutil
 from pathlib import Path
-
 import cv2
 import numpy as np
-
 
 class PiecePositionDetector:
     def __init__(
@@ -35,6 +33,14 @@ class PiecePositionDetector:
             complete_img = cv2.imread(complete_img_path)
         else:
             raise FileNotFoundError(f"Input file not found: {complete_img_path}")
+
+        complete_img = cv2.imread(str(complete_img_path))
+        if complete_img is None:
+            raise ValueError(f"画像の読み込みに失敗: {complete_img_path}")
+
+        complete_img = self.apply_bilateral_filter(complete_img)
+        complete_img = self.apply_clahe_to_v_channel(complete_img)
+
         for i in range(max_index):
             page_string = str(i + 1).zfill(3)
             piece_img_path = self.piece_dir / f"{piece_id}_{page_string}.png"
@@ -106,16 +112,38 @@ class PiecePositionDetector:
         # --- アルファチャンネル処理 ---
         bgrB = imgB[:, :, :3]
         alphaB = imgB[:, :, 3]
-        maskB = alphaB > 0
 
-        # --- 特徴点検出（AKAZE） ---
-        akaze = cv2.AKAZE_create()
-        kpA, desA = akaze.detectAndCompute(imgA, None)
+        maskB = (alphaB > 0).astype(np.uint8)
 
-        # AKAZE
-        akaze = cv2.AKAZE_create()
-        kpB_all, desB_all = akaze.detectAndCompute(bgrB, None)
+        scales = [0.9, 0.95, 1.0, 1.05, 1.1]
+        best_score = float('inf')
+        best_result = None
 
+        for scale in scales:
+            scaled_bgrB = cv2.resize(bgrB, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+            scaled_maskB = cv2.resize(maskB, None, fx=scale, fy=scale, interpolation=cv2.INTER_NEAREST)
+
+            result, score = self.try_match(imgA, scaled_bgrB, scaled_maskB)
+            if result is not None and score < best_score:
+                best_score = score
+                best_result = result
+
+        if best_result is not None:
+            output_path = self.output_dir / f"{piece_id}_{page_string}.png"
+            cv2.imwrite(str(output_path), best_result)
+            print(f"{piece_id}_{page_string}: Similarity score = {best_score:.2f}")
+            if self.debug:
+                cv2.imshow("Result", best_result)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+        else:
+            print(f"❌ マッチ失敗: {piece_id}_{page_string}")
+
+    def try_match(self, imgA, imgB, maskB):
+        sift = cv2.SIFT_create()
+        kpA, desA = sift.detectAndCompute(imgA, None)
+        kpB_all, desB_all = sift.detectAndCompute(imgB, maskB)
+        
         # 輪郭内の特徴点だけに限定
         kpB = self.filter_keypoints_inside_contours(kpB_all, contours)
 
@@ -123,39 +151,72 @@ class PiecePositionDetector:
         idxs = [kpB_all.index(kp) for kp in kpB]
         desB = np.array([desB_all[i] for i in idxs])
 
-        # --- 特徴点マッチング（BF + Hamming） ---
-        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-        matches = bf.match(desB, desA)
-        matches = sorted(matches, key=lambda x: x.distance)
+        if desA is None or desB is None:
+            return None, None
 
-        if len(matches) < 4:
-            return None
-            # raise ValueError(f"マッチング点が少なすぎます: {len(matches)}点")
+        index_params = dict(algorithm=1, trees=5)
+        search_params = dict(checks=50)
+        flann = cv2.FlannBasedMatcher(index_params, search_params)
 
+        try:
+            matches = flann.knnMatch(desB, desA, k=2)
+        except:
+            return None, None
+
+        good_matches = []
+        for m, n in matches:
+            if m.distance < 0.8 * n.distance:
+                good_matches.append(m)
+
+        if len(good_matches) < 10:
+            return None, None
+          
         # 対応点抽出（可能ならlen(matches)でクリップ）
         N_MATCHES = min(30, len(matches))
 
-        ptsB = np.float32([kpB[m.queryIdx].pt for m in matches[:N_MATCHES]]).reshape(
-            -1, 1, 2
-        )
-        ptsA = np.float32([kpA[m.trainIdx].pt for m in matches[:N_MATCHES]]).reshape(
-            -1, 1, 2
-        )
+        good_matches = sorted(good_matches, key=lambda x: x.distance)
+        top_matches = good_matches[:N_MATCHES]
 
-        # --- 類似変換の推定（部分アフィン）---
+        ptsB = np.float32([kpB[m.queryIdx].pt for m in top_matches]).reshape(-1, 1, 2)
+        ptsA = np.float32([kpA[m.trainIdx].pt for m in top_matches]).reshape(-1, 1, 2)
+
         M, inliers = cv2.estimateAffinePartial2D(ptsB, ptsA, method=cv2.RANSAC)
 
-        # --- ピース画像のワープ処理 ---
-        hA, wA = imgA.shape[:2]
-        warpedB = cv2.warpAffine(bgrB, M, (wA, hA), borderValue=(0, 0, 0))
-        warpedMask = cv2.warpAffine(maskB.astype(np.uint8), M, (wA, hA))
+        if M is None or inliers is None:
+            return None, None
 
-        # --- 合成 ---
+        # ✅ 【チェック1】RANSAC inlier数
+        if np.sum(inliers) < 15:
+            return None, None
+
+        # ✅ 【チェック2】スケール制限
+        a, b, tx = M[0]
+        c, d, ty = M[1]
+        scale_x = np.sqrt(a**2 + c**2)
+        scale_y = np.sqrt(b**2 + d**2)
+        if not (0.85 <= scale_x <= 1.15 and 0.85 <= scale_y <= 1.15):
+            return None, None
+
+        # ✅ 【チェック3】重心距離制限
+        hB, wB = imgB.shape[:2]
+        centerB = np.array([wB / 2, hB / 2, 1])
+        mapped_center = M @ centerB
+        hA, wA = imgA.shape[:2]
+        diag = np.sqrt(wA**2 + hA**2)
+        centerA = np.array([wA / 2, hA / 2])
+        distance = np.linalg.norm(mapped_center - centerA)
+        if distance > 0.1 * diag:
+            return None, None
+
+        # 合格 → 合成
+        hA, wA = imgA.shape[:2]
+        warpedB = cv2.warpAffine(imgB, M, (wA, hA), borderValue=(0, 0, 0))
+        warpedMask = cv2.warpAffine(maskB, M, (wA, hA))
+
         result = imgA.copy()
         result[warpedMask > 0] = warpedB[warpedMask > 0]
 
-        # --- 対応点の可視化 ---
-        for m in matches[:N_MATCHES]:
+        for m in good_matches[:N_MATCHES]:
             ptA = tuple(np.round(kpA[m.trainIdx].pt).astype(int))  # 合成先（imgA上の点）
             ptB = tuple(np.round(cv2.transform(np.array([[kpB[m.queryIdx].pt]], dtype=np.float32), M)[0][0]).astype(int))  # warp後の位置
 
@@ -164,18 +225,20 @@ class PiecePositionDetector:
             cv2.circle(result, ptA, 3, (0, 0, 255), -1)
             cv2.circle(result, ptB, 3, (0, 255, 0), -1)
 
-        # --- 保存 & スコア出力 ---
-        output_path = self.output_dir / f"{piece_id}_{page_string}.png"
-        cv2.imwrite(output_path, result)
-        score = np.mean([m.distance for m in matches[:N_MATCHES]])
-        print(f"Similarity transform score (lower is better): {score:.2f}")
-        if self.debug:
-            cv2.imshow("Piece Image", result)  # ← 第1引数にウィンドウタイトル
-            cv2.waitKey(0)  # ← キー入力を待つ（表示されるのに必要）
-            cv2.destroyAllWindows()  # ← ウィンドウを閉じる処理
+        contours, _ = cv2.findContours(warpedMask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(result, contours, -1, (0, 0, 255), 2)
 
-        return output_path
+        score = np.mean([m.distance for m in top_matches])
+        return result, score
 
+    def apply_bilateral_filter(self, img_bgr):
+        return cv2.bilateralFilter(img_bgr, d=9, sigmaColor=75, sigmaSpace=75)
+
+    def apply_clahe_to_v_channel(self, img_bgr):
+        hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        hsv[:, :, 2] = clahe.apply(hsv[:, :, 2])
+        return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
 if __name__ == "__main__":
     piece_position_detector = PiecePositionDetector(debug=True, data_init=False)
