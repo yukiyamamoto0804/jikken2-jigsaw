@@ -1,4 +1,4 @@
-import shutil
+import shutil, json
 from pathlib import Path
 
 import cv2
@@ -11,21 +11,28 @@ class PieceDivision:
         self,
         multi_input_dir="data/puzzle_pieces",
         single_input_dir="data/single_piece",
+        tmp_dir="data/piece_division_tmp",
         output_dir="data/piece_transparent",
         debug=False,
+        data_init=True,
     ):
         self.multi_input_dir = Path(multi_input_dir)
         self.single_input_dir = Path(single_input_dir)
         self.output_dir = Path(output_dir)
+        self.tmp_dir = Path(tmp_dir)
         self.debug = debug
-        if self.multi_input_dir.exists():
-            shutil.rmtree(self.multi_input_dir)
-        if self.single_input_dir.exists():
-            shutil.rmtree(self.single_input_dir)
-        if self.output_dir.exists():
-            shutil.rmtree(self.output_dir)
+        if data_init:
+            if self.multi_input_dir.exists():
+                shutil.rmtree(self.multi_input_dir)
+            if self.single_input_dir.exists():
+                shutil.rmtree(self.single_input_dir)
+            if self.tmp_dir.exists():
+                shutil.rmtree(self.tmp_dir)
+            if self.output_dir.exists():
+                shutil.rmtree(self.output_dir)
         self.multi_input_dir.mkdir(parents=True, exist_ok=True)
         self.single_input_dir.mkdir(parents=True, exist_ok=True)
+        self.tmp_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def process_init(self):
@@ -64,6 +71,11 @@ class PieceDivision:
         )
 
         idx = 0
+
+        # 中間データ
+        piece_contours = []
+        out_paths = []
+        cv2_imgs = []
 
         for cnt in contours:
             # 4. 小さすぎるものは無視
@@ -106,8 +118,19 @@ class PieceDivision:
             out_path = self.output_dir / f"{piece_id}_{self.idx:03d}.png"
             Image.fromarray(rgba).save(out_path)
 
+            cv2_imgs.append(roi)
+            piece_contours.append(cnt_local)
+            out_paths.append(out_path)
+       
         print(f"{idx} 個の透明背景付きピースを切り出して保存しました。")
 
+        # 中間データの保存
+        with open('imgs.json', 'w') as file:
+            json.dump(cv2_imgs, file)
+        with open('contours.json', 'w') as file:
+            json.dump(piece_contours, file)
+        with open('paths.json', 'w') as file:
+            json.dump(out_paths, file)
 
 if __name__ == "__main__":
     piece_division = PieceDivision(debug=False)
