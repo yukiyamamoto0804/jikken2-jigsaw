@@ -66,17 +66,20 @@ def display_piece():
                                 page_string=f"{(idx):03d}",
                             )
                             st.session_state.selected_image = output_path
+                            st.rerun()
                     position_index += 1
             else:
                 break
 
 
-display_piece()
 # ポップアップとして画像を拡大表示
 if st.session_state.selected_image:
     st.markdown("---")
     st.markdown("### 拡大表示（クリックで閉じる）")
     if st.button("✖️ 閉じる", key="close_popup"):
         st.session_state.selected_image = None
+        st.rerun()
     else:
         st.image(Image.open(st.session_state.selected_image), use_container_width=True)
+else:
+    display_piece()
