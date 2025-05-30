@@ -7,9 +7,7 @@ from PIL import Image
 # ピースの写真をアップロードする
 st.title("ジグソーパズルのピースをアップロード")
 
-uploaded_image = st.file_uploader(
-    "ピースの画像をアップロード", type=["jpg", "png", "jpeg"]
-)
+uploaded_image = st.file_uploader("ピースの画像をアップロード", type=["jpg", "png", "jpeg"])
 
 if uploaded_image:
     image = Image.open(uploaded_image)
@@ -30,3 +28,4 @@ if uploaded_image:
     if st.button("ピース確認ページへ"):
         st.session_state.piece_division.extract_multi_pieces(st.session_state.puzzle_id)
         st.session_state.page = "reupload_pieces"
+        st.rerun()

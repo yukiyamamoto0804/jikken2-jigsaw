@@ -8,9 +8,7 @@ from PIL import Image
 # ピースの写真をアップロードする
 st.title("ジグソーパズル全体の画像をアップロード")
 
-uploaded_image = st.file_uploader(
-    "パズル全体の画像をアップロード", type=["jpg", "png", "jpeg"]
-)
+uploaded_image = st.file_uploader("パズル全体の画像をアップロード", type=["jpg", "png", "jpeg"])
 
 if uploaded_image:
     image = Image.open(uploaded_image)
@@ -18,6 +16,7 @@ if uploaded_image:
 
     if st.button("Go to Upload Pieces Page"):
         st.session_state.page = "upload_pieces"
+        st.rerun()
 
 if uploaded_image and st.session_state.puzzle_saved is False:
     st.session_state.puzzle_saved = True
