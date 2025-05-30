@@ -73,9 +73,7 @@ class PieceDivision:
         idx = 0
 
         # 中間データ
-        piece_contours = []
-        out_paths = []
-        cv2_imgs = []
+        out_paths = {}
 
         for cnt in contours:
             # 4. 小さすぎるものは無視
@@ -117,25 +115,22 @@ class PieceDivision:
             idx += 1
             out_path = self.output_dir / f"{piece_id}_{self.idx:03d}.png"
             Image.fromarray(rgba).save(out_path)
-
-            cv2_imgs.append(roi)
-            piece_contours.append(cnt_local)
-            out_paths.append(out_path)
+            
+            # 中間データの保存
+            np.save(self.tmp_dir / f'{piece_id}_{self.idx:03d}_img.npy', np.array(roi))
+            np.save(self.tmp_dir / f'{piece_id}_{self.idx:03d}_contour.npy', np.array(cnt_local))
+            out_paths[f'piece_{self.idx:03d}'] = str(out_path)
        
         print(f"{idx} 個の透明背景付きピースを切り出して保存しました。")
 
         # 中間データの保存
-        with open('imgs.json', 'w') as file:
-            json.dump(cv2_imgs, file)
-        with open('contours.json', 'w') as file:
-            json.dump(piece_contours, file)
-        with open('paths.json', 'w') as file:
+        with open(self.tmp_dir / 'paths.json', 'w') as file:
             json.dump(out_paths, file)
 
 if __name__ == "__main__":
-    piece_division = PieceDivision(debug=False)
+    piece_division = PieceDivision(debug=False, data_init=False)
     piece_division.process_init()
 
     # 実在する画像ファイル名に合わせてここを変更してください
-    piece_division.extract_multi_pieces("piece")  # 例: data/puzzle_pieces/0.png
+    piece_division.extract_multi_pieces("all_pieces")  # 例: data/puzzle_pieces/0.png
     # piece_division.extract_single_piece("0", "1")  # 例: data/single_piece/0_1.png
